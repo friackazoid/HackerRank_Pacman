@@ -33,12 +33,6 @@ bool operator< (Node const& lv, Node const& rv) {
 bool operator<(const std::pair<int, int> &lk, const std::pair<int, int> &rk) { 
     return lk.first < rk.first ? true : lk.second < rk.second; 
 }
-//
-//struct PairHash {
-//    std::size_t operator() (std::pair<int,int> const& p) const {
-//        return p.first*42+p.second;
-//    }
-//};
 
 bool ifTraversable (char c) {   
     return c == '-' || c == '.';
@@ -82,7 +76,6 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
     
     std::shared_ptr<Node> parent_it = root;
     std::shared_ptr<Node> node_it;
-    //int tmp_count{0};
     //auto search_time_start = std::chrono::high_resolution_clock::now();
     while ( !queue.empty() ) {
         
@@ -90,9 +83,6 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
         queue.pop();
         explored.push_back( node_it->cell_ );
 
-        //if (isVisited(visited, node_it->cell_))
-        //    continue; 
-        
         if (isGoal(node_it->cell_, {food_r, food_c} )) 
             break;
         
