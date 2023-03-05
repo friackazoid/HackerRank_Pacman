@@ -7,6 +7,7 @@ In the challenge is was required to implement various planning algorithms-
 - `pacman_bfs.cpp` - is implementation of the Breadth First Search
 - `pacman_ucs.cpp` - is a variation of Cheapest First Search, with uniform cost. (https://www.hackerrank.com/challenges/pacman-ucs?isFullScreen=true&hr_b=1)
 - `pacman_astar.cpp` - uses more complicated heuristic function. (https://www.hackerrank.com/challenges/pacman-astar?isFullScreen=true&hr_b=1)
+- `pacman_npuzzle.cpp` - uses A* algorithm to solve classic N-puzzle problem. With proposed heuristic it solves all HackerRank tasks.
 
 `pacman.cpp` - is a templated implementation that can pass any challenge
 
