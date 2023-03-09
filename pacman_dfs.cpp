@@ -54,9 +54,8 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
     std::stack< std::shared_ptr<Node>> stack;
     std::set<std::pair<int, int>, std::less<>> visited;
     std::vector<std::pair<int, int>> explored;
-    auto root = std::make_shared<Node>(pacman_r, pacman_c);
     
-    stack.push(root);
+    stack.push( std::make_shared<Node>(pacman_r, pacman_c));
     
     std::shared_ptr<Node> node_it;
     auto search_time_start = std::chrono::high_resolution_clock::now();
@@ -70,12 +69,10 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
             break;
         
         for (const auto& direction : std::vector<std::string>{"UP", "LEFT", "RIGHT", "DOWN"}) {
-            
             auto new_pos = shiftTo(node_it->cell_, direction);
             if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
-
                     stack.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it) );
                     visited.insert(new_pos);
                 }
@@ -84,7 +81,6 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
     }
 
     auto search_time_stop = std::chrono::high_resolution_clock::now();
-
     auto final_path_start = std::chrono::high_resolution_clock::now();
    // Create final path 
     std::vector<std::pair<int,int>> final_path;
@@ -110,7 +106,6 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
 
     std::cout << "Find path took: " << std::chrono::duration_cast<std::chrono::microseconds>( search_time_stop - search_time_start).count() << " mc" << std::endl;
     std::cout << "Creat path took: " << std::chrono::duration_cast<std::chrono::microseconds>( final_path_stop - final_path_start).count() << " mc" << std::endl;
-
 }
 
 int main(void) {
