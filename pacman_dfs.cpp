@@ -75,10 +75,9 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
             if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
-                    auto new_node = std::make_shared<Node>(new_pos.first, new_pos.second, node_it);
 
-                    stack.push( new_node );
-                    visited.insert(new_node->cell_);
+                    stack.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it) );
+                    visited.insert(new_pos);
                 }
             }
         }
@@ -95,7 +94,7 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
     }
     auto final_path_stop = std::chrono::high_resolution_clock::now(); 
 
-    //Print  number of visited nodes
+    //Print  number of explored nodes
     std::cout << explored.size() << std::endl;
     // print Tree
     for (const auto& it: explored) {
