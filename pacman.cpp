@@ -1,244 +1,194 @@
 #include <iostream>
+
+#include <map>
 #include <vector>
+#include <set>
 #include <stack>
 #include <queue>
-#include <set>
 #include <memory>
-#include <algorithm>
-#include <chrono>
 
-#include <type_traits>
-
-template <typename TCell>
+//TODO: TState shoudl have operator== 
+template <typename TState, typename TGScore = int>
 class Node {
     public:
-    using value_type = TCell;
+    using value_type = TState;
 
-    TCell cell_;
+    TState state_;
     std::shared_ptr<Node> parent_;
-    
-    Node(TCell cell) : cell_(cell), parent_(nullptr) {};
-    Node(TCell cell, std::shared_ptr<Node> parent) : cell_(cell), parent_(parent) {};
+    TGScore g_score_;
 
-    TCell getCell () const { return cell_; }
+    Node() = delete;
+    Node( Node const& ) = delete;
+    
+    Node(TState state) : state_(state)
+                       , parent_(nullptr)
+                       , g_score_(0) {};
+
+    Node(TState state, std::shared_ptr<Node> parent) : state_(state)
+                                                     , parent_(parent)
+                                                     , g_score_(parent->g_score_) {};
 };
 
-bool ifTraversable (char c) {   
-    return c == '-' || c == '.';
-}
+template < typename TState,
+           typename FGetNeighbors,
+           typename FFilter,
+           typename TContainer = std::stack< std::shared_ptr<Node<TState>>> >
+class NodeVisitor {
+private:
 
-std::pair<int, int> shiftTo (const std::pair<int, int>& current_pos, const std::string& direction ) {
-    if (direction == "UP")
-        return {current_pos.first - 1, current_pos.second};
-    
-    if (direction == "LEFT")
-        return {current_pos.first, current_pos.second - 1};
-    
-    if (direction == "RIGHT")
-        return {current_pos.first, current_pos.second + 1};
-    
-    if (direction == "DOWN")
-        return {current_pos.first + 1, current_pos.second};
-    
-    return {-1, -1};
-}
+    using TNode = Node<TState>;
 
-template <typename TNode>
-using TCell = typename TNode::value_type;
+    FFilter filter_;
+    TContainer c_{};
+    FGetNeighbors get_neighbors_;
+    std::set<TState, std::less<>> visited_;
 
-template <typename TNode>
-using TNodePtr = typename std::shared_ptr<TNode>;
+    bool isVisited (TState const& state) { return visited_.find(state) != visited_.end(); }
 
-template <typename TNode>
-using TVisitor = std::set<TCell<TNode>> ;
+public:
+    NodeVisitor () = delete;
+    NodeVisitor (NodeVisitor const&) = delete;
+    NodeVisitor ( FFilter const& filter ) : filter_(filter) {};
 
-template <typename TNode>
-bool isVisited ( TVisitor<TNode> const& visited, TCell<TNode> const& node ) {
-    return visited.find(node) != visited.end();
-}
+    void visit_neighbors( std::shared_ptr<TNode> const& current_node ) {
+        std::vector<TState> neighbors;
+        get_neighbors_( current_node->state_, std::back_inserter(neighbors) );
 
-template <typename TNode,
-          typename S = std::stack< TNodePtr<TNode> >, // std::stack by default
-          typename TResultPathIterator,
-          typename TExploredPathIterator
-          >
-void solve(TCell<TNode> const& start_cell,
-           TCell<TNode> const& goal_cell,
-           std::vector<std::string> const& grid,
-           TResultPathIterator result_path_it,
-           TExploredPathIterator explored) {
+        for (auto const& n : neighbors) {
+            // check not visited
+            if (filter_(n) && !isVisited(n)) {
+                auto new_node = std::make_shared<TNode>(n, current_node);
 
-    auto root = std::make_shared<TNode>(start_cell);
- 
-    S stack;   
-    stack.push(root);
- 
-    TVisitor<TNode> visited;
-    std::shared_ptr<TNode> node_it;
-    auto search_time_start = std::chrono::high_resolution_clock::now();
-    while ( !stack.empty() ) {
-
-        if constexpr (std::is_same_v< S, std::stack<TNodePtr<TNode>> >)
-            node_it = stack.top();
-        else 
-            node_it = stack.front();
-
-        stack.pop();
-        *explored++ = node_it->cell_;
-
-        if (node_it->cell_ == goal_cell ) 
-            break;
-        
-        for (const auto& direction : std::vector<std::string>{"UP", "LEFT", "RIGHT", "DOWN"}) {
-            
-            auto new_pos = shiftTo(node_it->cell_, direction);
-            if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
-                
-                if ( !isVisited <TNode> (visited, new_pos) ) {
-                    auto new_node = std::make_shared<TNode>(new_pos, node_it);
-
-                    stack.push( new_node );
-                    visited.insert(new_node->cell_);
-                }
+                c_.push(new_node);
+                visited_.insert(n);
             }
         }
+    };
+
+    // TODO TContainer for sp<Node>
+    void push ( std::shared_ptr<TNode> node ) { c_.push(node); }
+    bool empty () { return c_.empty(); } 
+
+    std::shared_ptr<TNode> pop () {
+        auto tmp = c_.top();
+        c_.pop();
+        return tmp; 
     }
 
-    auto search_time_stop = std::chrono::high_resolution_clock::now();
+};
 
-    auto final_path_start = std::chrono::high_resolution_clock::now();
-   // Create final path 
+template <typename TState, 
+         typename TNodeVisitor,
+         typename TResultPathIterator,
+         typename TExploredNodeIterator>
+void a_star ( TState const& start, TState const& goal,
+              TNodeVisitor& node_visitor,
+              TResultPathIterator result_path_it, TExploredNodeIterator explored_node_it ) {
+
+    using TNode = Node<TState>;
+    //using TNodePtr = std::shared_ptr<TNode>;
+
+    node_visitor.push(std::make_shared<TNode> (start));
+    
+    std::shared_ptr<TNode> node_it;
+
+    while ( !node_visitor.empty()) {
+        node_it = node_visitor.pop();
+
+        // if user need all explored nodes
+        //if (explored_node_it != nullptr)
+            *explored_node_it++ = node_it->state_;
+
+        // if goal reached
+        if (node_it->state_ == goal) 
+            break;
+
+        node_visitor.visit_neighbors( node_it );
+    }
+
+    //TODO: process case with no solution
     while (node_it != nullptr) {
-        *result_path_it++  = node_it->cell_;
+        *result_path_it++  = node_it->state_;
         node_it = node_it->parent_;
     }
-    auto final_path_stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Find path took: " << std::chrono::duration_cast<std::chrono::microseconds>( search_time_stop - search_time_start).count() << " mc" << std::endl;
-    std::cout << "Creat path took: " << std::chrono::duration_cast<std::chrono::microseconds>( final_path_stop - final_path_start).count() << " mc" << std::endl;
-//    std::cout << "Print tree took: " << std::chrono::duration_cast<std::chrono::microseconds>( search_time_start - search_time_stop).count() << std::endl;
-
 }
 
-bool operator<(const std::pair<int, int> &lk, const std::pair<int, int> &rk) { 
-    return lk.first < rk.first ? true : lk.second < rk.second; 
+using pacman_state_t = std::pair<int, int>;
+bool operator< (pacman_state_t const& lv, pacman_state_t const& rv) {
+    return lv.first < rv.first ? true : lv.second < rv.second;
 }
 
-void dfs (int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
+// The function returns the neighbors of the given state
+// in a specific order as required by the Hackerrank task.
+struct PacmanNeighborFunctor {
+    template <typename TOutputIterator>
+    void operator() ( pacman_state_t const& current_state, TOutputIterator result) {
 
-    using PacmanCell = std::pair<int, int>;
-    using PacmanNode = Node<PacmanCell>;
+        std::vector< std::pair<int, int> > shifts {
+            {-1,  0}, // UP
+            { 0, -1}, // LEFT
+            { 0,  1}, // RIGHT
+            { 1,  0}  // DOWN
+        };
 
-    // make a structure Node->cell_ make a template parameter
-    std::vector< PacmanCell > final_path;
-    std::vector< PacmanCell > explored;
-
-    solve< PacmanNode > (std::make_pair(pacman_r, pacman_c),  // start
-                         std::make_pair(food_r, food_c), // goal
-                         grid,
-                         std::back_inserter(final_path),
-                         std::back_inserter(explored) );
-    
-    //Print  number of visited nodes
-    std::cout << explored.size() << std::endl;
-    // print Tree
-    for (const auto& it: explored) {
-        std::cout << it.first << " " << it.second << std::endl;
-    } 
-    //print path length
-    std::cout << final_path.size()-1 << std::endl;
-    // Print path
-    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) {
-        std::cout << r_it->first  << " " << r_it->second << std::endl;
-    }
-}
-
-void bfs (int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-
-    using PacmanCell = std::pair<int, int>;
-    using PacmanNode = Node<PacmanCell>;
-    using PacmanNodePtr = std::shared_ptr<PacmanNode>;
-
-    // make a structure Node->cell_ make a template parameter
-    std::vector< PacmanCell > final_path;
-    std::vector< PacmanCell > explored;
-
-    solve< PacmanNode, std::queue<PacmanNodePtr> > (std::make_pair(pacman_r, pacman_c),  // start
-                         std::make_pair(food_r, food_c), // goal
-                         grid,
-                         std::back_inserter(final_path),
-                         std::back_inserter(explored));
-    
-    //Print  number of visited nodes
-    std::cout << explored.size() << std::endl;
-    // print Tree
-    for (const auto& it: explored) {
-        std::cout << it.first << " " << it.second << std::endl;
-    } 
-    //print path length
-    std::cout << final_path.size()-1 << std::endl;
-    // Print path
-    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) {
-        std::cout << r_it->first  << " " << r_it->second << std::endl;
-    }
-}
-
-//template <typename T, typename Comparator = std::less<T>>
-//struct pLess{
-//    bool operator() (  T const *l, T const *r ) { return Comparator()(*l, *r); }
-//};
-//
-//template <typename T, typename Comparator>
-//using PacmanQueue = std::priority_queue< T, std::vector<T>, Comparator<T>>;
-
-#if 0
-void ucs (int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-
-    struct PacmanCell {
-        int r, c, cost;
-
-        bool operator<(PacmanCell const& other ) const { return cost < other.cost; }
-    };
-
-    using PacmanNode = Node<PacmanCell>;
-    using PacmanNodePtr = std::shared_ptr<PacmanNode>;
-
-    struct PacmanNodeComparator : public std::binary_function<PacmanNodePtr, PacmanNodePtr, bool> {
-        bool operator()( PacmanNodePtr const l, PacmanNodePtr const r ) const {
-            return l->getCell() < r->getCell();
+        for (auto const&  sh : shifts) {
+                        // override operator +
+            *result++ = std::make_pair(current_state.first + sh.first, current_state.second + sh.second ); 
         }
-    };
+    }
+};
 
-    // make a structure Node->cell_ make a template parameter
-    std::vector< PacmanCell > final_path;
-    std::vector< PacmanCell > explored;
+struct PacmanStateFilter {
+    int r_, c_;
+    std::vector<std::string> grid_;
 
-    solve<PacmanNode, 
-          //PacmanQueue<PacmanNodePtr, pLess>
-          std::priority_queue<PacmanNodePtr, std::vector<PacmanNodePtr>, PacmanNodeComparator> > (
-                {pacman_r, pacman_c, 0},  // start
-                {food_r, food_c, 1}, // goal
-                grid,
-                std::back_inserter(final_path),
-                std::back_inserter(explored));
-    
-    //Print  number of visited nodes
-    std::cout << explored.size() << std::endl;
+    bool operator() ( pacman_state_t const& state ) { 
+        if ( state.first >= r_  ||
+             state.first < 0    ||
+             state.second >= c_ ||
+             state.second < 0 )
+            return false;
+        
+        auto const&  grid_el = grid_[state.first][state.second]; 
+        if ( grid_el == '%' )
+            return false;
+
+        return true;
+    }
+};
+
+void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
+    std::vector<pacman_state_t> result_path; 
+    std::vector<pacman_state_t> explored_nodes;
+
+    NodeVisitor<pacman_state_t,
+                PacmanNeighborFunctor,
+                PacmanStateFilter> pacman_node_visitor( PacmanStateFilter{r, c, grid} );
+
+    a_star<pacman_state_t> ( 
+            {pacman_r, pacman_c},
+            {food_r, food_c},
+            pacman_node_visitor,
+            std::back_inserter(result_path),
+            std::back_inserter(explored_nodes)
+          );
+
+    // print number of explored nodes
+    std::cout << explored_nodes.size() << std::endl;
     // print Tree
-    for (const auto& it: explored) {
-        std::cout << it.r << " " << it.c << std::endl;
-    } 
+    for (const auto& it: explored_nodes) {
+        std::cout << it.first << " " << it.second << std::endl;
+    }
+    
     //print path length
-    std::cout << final_path.size()-1 << std::endl;
+    std::cout << result_path.size()-1 << std::endl;
     // Print path
-    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) {
-        std::cout << r_it->r  << " " << r_it->c << std::endl;
+    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it ) {
+        std::cout << r_it->first  << " " << r_it->second << std::endl;
     }
 }
-#endif
 
-int main(void) {
-
+void pacman_dfs() {
     int r,c, pacman_r, pacman_c, food_r, food_c;
     
     std::cin >> pacman_r >> pacman_c;
@@ -252,7 +202,13 @@ int main(void) {
         grid.push_back(s);
     }
 
-    bfs(pacman_r, pacman_c, food_r, food_c, grid);
+    pacman_dfs_solve (r, c, pacman_r, pacman_c, food_r, food_c, grid);
+}
+
+
+int main(void) {
+
+    pacman_dfs();
 
     return 0;
 }
