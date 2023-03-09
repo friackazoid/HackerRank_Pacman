@@ -7,6 +7,9 @@
 #include <queue>
 #include <memory>
 
+
+namespace a_star_search {
+
 //TODO: TState shoudl have operator== 
 template <typename TState, typename TGScore = int>
 class Node {
@@ -50,7 +53,7 @@ public:
     NodeVisitor (NodeVisitor const&) = delete;
     NodeVisitor ( FFilter const& filter ) : filter_(filter) {};
 
-    void visit_neighbors( std::shared_ptr<TNode> const& current_node ) {
+    void visit_neighbors (std::shared_ptr<TNode> const& current_node) {
         std::vector<TState> neighbors;
         get_neighbors_( current_node->state_, std::back_inserter(neighbors) );
 
@@ -74,7 +77,6 @@ public:
         c_.pop();
         return tmp; 
     }
-
 };
 
 template <typename TState, 
@@ -113,9 +115,18 @@ void a_star ( TState const& start, TState const& goal,
     }
 }
 
+} // namespace a_star_search
+
+//-------------------------------------------------------------------------
+
+namespace pacman_task {
 using pacman_state_t = std::pair<int, int>;
 bool operator< (pacman_state_t const& lv, pacman_state_t const& rv) {
     return lv.first < rv.first ? true : lv.second < rv.second;
+}
+
+pacman_state_t operator+ (pacman_state_t const& lv, pacman_state_t const& rv) {
+    return {lv.first + rv.first, lv.second + rv.second};
 }
 
 // The function returns the neighbors of the given state
@@ -123,7 +134,6 @@ bool operator< (pacman_state_t const& lv, pacman_state_t const& rv) {
 struct PacmanNeighborFunctor {
     template <typename TOutputIterator>
     void operator() ( pacman_state_t const& current_state, TOutputIterator result) {
-
         std::vector< std::pair<int, int> > shifts {
             {-1,  0}, // UP
             { 0, -1}, // LEFT
@@ -131,10 +141,8 @@ struct PacmanNeighborFunctor {
             { 1,  0}  // DOWN
         };
 
-        for (auto const&  sh : shifts) {
-                        // override operator +
-            *result++ = std::make_pair(current_state.first + sh.first, current_state.second + sh.second ); 
-        }
+        for (auto const&  sh : shifts) 
+            *result++ = current_state + sh; 
     }
 };
 
@@ -143,14 +151,10 @@ struct PacmanStateFilter {
     std::vector<std::string> grid_;
 
     bool operator() ( pacman_state_t const& state ) { 
-        if ( state.first >= r_  ||
-             state.first < 0    ||
-             state.second >= c_ ||
-             state.second < 0 )
+        if (state.first >= r_|| state.first < 0 || state.second >= c_ || state.second < 0)
             return false;
         
-        auto const&  grid_el = grid_[state.first][state.second]; 
-        if ( grid_el == '%' )
+        if ( grid_[state.first][state.second] == '%' )
             return false;
 
         return true;
@@ -161,11 +165,11 @@ void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
     std::vector<pacman_state_t> result_path; 
     std::vector<pacman_state_t> explored_nodes;
 
-    NodeVisitor<pacman_state_t,
+    a_star_search::NodeVisitor<pacman_state_t,
                 PacmanNeighborFunctor,
                 PacmanStateFilter> pacman_node_visitor( PacmanStateFilter{r, c, grid} );
 
-    a_star<pacman_state_t> ( 
+    a_star_search::a_star<pacman_state_t> ( 
             {pacman_r, pacman_c},
             {food_r, food_c},
             pacman_node_visitor,
@@ -176,19 +180,17 @@ void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
     // print number of explored nodes
     std::cout << explored_nodes.size() << std::endl;
     // print Tree
-    for (const auto& it: explored_nodes) {
+    for (const auto& it: explored_nodes)
         std::cout << it.first << " " << it.second << std::endl;
-    }
     
     //print path length
     std::cout << result_path.size()-1 << std::endl;
     // Print path
-    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it ) {
+    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
         std::cout << r_it->first  << " " << r_it->second << std::endl;
-    }
 }
 
-void pacman_dfs() {
+void pacman_read_data() {
     int r,c, pacman_r, pacman_c, food_r, food_c;
     
     std::cin >> pacman_r >> pacman_c;
@@ -205,10 +207,12 @@ void pacman_dfs() {
     pacman_dfs_solve (r, c, pacman_r, pacman_c, food_r, food_c, grid);
 }
 
+} //pacman_task
+
 
 int main(void) {
 
-    pacman_dfs();
+    pacman_task::pacman_read_data();
 
     return 0;
 }
