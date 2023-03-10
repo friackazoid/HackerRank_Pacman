@@ -56,13 +56,11 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
 
     // To change from DBS to DFS only change of container was required  
     std::queue< std::shared_ptr<Node>> queue;
-    std::set<std::pair<int, int>, std::less<>> visited;
+    std::set<std::pair<int, int>, std::less<>> visited {{pacman_r, pacman_c}};
     std::vector<std::pair<int, int>>  explored;
-    auto root = std::make_shared<Node>(pacman_r, pacman_c);
     
-    queue.push(root);
-    
-    std::shared_ptr<Node> parent_it = root;
+    queue.push(std::make_shared<Node>(pacman_r, pacman_c));
+
     std::shared_ptr<Node> node_it;
     //auto search_time_start = std::chrono::high_resolution_clock::now();
     while ( !queue.empty() ) {
@@ -71,7 +69,6 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
         queue.pop();
         explored.push_back( node_it->cell_ );
 
-        
         if (isGoal(node_it->cell_, {food_r, food_c} )) 
             break;
         
@@ -81,10 +78,8 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
             if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
-                    auto new_node = std::make_shared<Node>(new_pos.first, new_pos.second, node_it);
-
-                    queue.push( new_node );
-                    visited.insert(new_node->cell_);
+                    queue.push(std::make_shared<Node>(new_pos.first, new_pos.second, node_it));
+                    visited.insert(new_pos);
                 }
             }
         }
@@ -101,19 +96,15 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
     }
     //auto final_path_stop = std::chrono::high_resolution_clock::now(); 
 
-    //Print  number of explored nodes
+    //Print  number of explored nodes and tree
     std::cout << explored.size() << endl;
-    // print Tree
-    for (const auto& it: explored) {
+    for (const auto& it: explored) 
         std::cout << it.first << " " << it.second << std::endl;
-    } 
 
-    //print path length
+    //print path length and path
     std::cout << final_path.size()-1 << std::endl;
-    // Print path
-    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) {
+    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) 
         std::cout << r_it->first  << " " << r_it->second << endl;
-    }
 
     //std::cout << "Find path took: " << std::chrono::duration_cast<std::chrono::microseconds>( search_time_stop - search_time_start).count() << " mc" << std::endl;
     //std::cout << "Creat path took: " << std::chrono::duration_cast<std::chrono::microseconds>( final_path_stop - final_path_start).count() << " mc" << std::endl;
