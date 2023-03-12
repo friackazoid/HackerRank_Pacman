@@ -92,12 +92,8 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
             if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
-
-
-                    auto new_node = std::make_shared<Node>(new_pos.first, new_pos.second, node_it, isGoal(new_pos, {food_r, food_c}) ? 1 : 0 );
-
-                    queue.push( new_node );
-                    visited.insert(new_node->cell_);
+                    queue.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it, isGoal(new_pos, {food_r, food_c}) ? 1 : 0 ) );
+                    visited.insert(new_pos);
                 }
             }
         }
@@ -114,16 +110,10 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
     }
     //auto final_path_stop = std::chrono::high_resolution_clock::now(); 
 
-
-    // DO NOT PRINT TREE for this algorithm
-    // make printing functions optional
-
-    //print path length
+    //print path length and path
     std::cout << final_path.size()-1 << std::endl;
-    // Print path
-    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) {
+    for ( auto r_it = final_path.rbegin(); r_it != final_path.rend(); ++r_it ) 
         std::cout << r_it->first  << " " << r_it->second << endl;
-    }
 
     //std::cout << "Find path took: " << std::chrono::duration_cast<std::chrono::microseconds>( search_time_stop - search_time_start).count() << " mc" << std::endl;
     //std::cout << "Creat path took: " << std::chrono::duration_cast<std::chrono::microseconds>( final_path_stop - final_path_start).count() << " mc" << std::endl;
