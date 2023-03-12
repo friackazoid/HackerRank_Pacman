@@ -9,36 +9,60 @@
 
 namespace a_star_search {
 
+template <typename T = int>
+struct DefaultHeuristic {
+    T operator()() { return T(0); }
+};
+
 //TODO: TState shoudl have operator== 
-template <typename TState, typename TGScore = int>
+// The heuristic has been specified for the Node instead of the TState,
+// allowing specify TState as generic type
+template < typename TState,
+           typename FHeuristic = DefaultHeuristic<>,
+           typename TScore = std::invoke_result_t<FHeuristic> >
 class Node {
-    public:
+    FHeuristic heuristic_;
+
+   // cost to go from start node to this node
+    TScore g_score_;
+    // the value of the state
+    TScore h_score_;
+    //TScore total_score_;
+
+public:
     using value_type = TState;
 
     TState state_;
     std::shared_ptr<Node> parent_;
-    TGScore g_score_;
 
+public: 
     Node() = delete;
     Node( Node const& ) = delete;
     
-    Node(TState state) : state_(state)
-                       , parent_(nullptr)
-                       , g_score_(0) {};
+    Node(TState state) : g_score_(0) 
+                       , h_score_( heuristic_() )
+                       , state_(state)
+                       , parent_(nullptr) {};
 
-    Node(TState state, std::shared_ptr<Node> parent) : state_(state)
-                                                     , parent_(parent)
-                                                     , g_score_(parent->g_score_) {};
+    Node(TState state, std::shared_ptr<Node> parent) : g_score_(parent->g_score_ + 1)
+                                                     , h_score_( heuristic_() )  
+                                                     , state_(state)
+                                                     , parent_(parent) {};
+    TScore get_h_score() const {return h_score_;};
 };
+
+template <typename TState>
+using NodePtr = std::shared_ptr< Node<TState>>;
 
 template < typename TState,
            typename FGetNeighbors,
            typename FFilter,
-           typename TContainer = std::queue<std::shared_ptr<Node<TState>>> >
-class NodeVisitor {
+           typename TContainer = std::queue<NodePtr<TState>>,
+           typename FHeuristic = DefaultHeuristic<int>>
+class NodeVisitor 
 private:
 
-    using TNode = Node<TState>;
+    using TNode = Node<TState, FHeuristic>;
 
     FFilter filter_;
     TContainer c_{};
@@ -85,10 +109,11 @@ public:
 template <typename TState, 
          typename TNodeVisitor,
          typename TResultPathIterator,
-         typename TExploredNodeIterator = void>
+         typename TExploredNodeIterator = std::void_t<>>
 void a_star ( TState const& start, TState const& goal,
               TNodeVisitor& node_visitor,
-              TResultPathIterator result_path_it, TExploredNodeIterator  explored_node_it ) {
+              TResultPathIterator result_path_it,
+              TExploredNodeIterator explored_node_it = TExploredNodeIterator() ) {
 
     using TNode = Node<TState>;
     //using TNodePtr = std::shared_ptr<TNode>;
@@ -125,10 +150,12 @@ using pacman_state_t = std::pair<int, int>;
 bool operator< (pacman_state_t const& lv, pacman_state_t const& rv) {
     return lv.first < rv.first ? true : lv.second < rv.second;
 }
-
 pacman_state_t operator+ (pacman_state_t const& lv, pacman_state_t const& rv) {
     return {lv.first + rv.first, lv.second + rv.second};
 }
+
+using pacman_node_t = a_star_search::NodePtr<pacman_state_t>;
+
 
 // The function returns the neighbors of the given state
 // in a specific order as required by the Hackerrank task.
@@ -142,7 +169,7 @@ struct PacmanNeighborFunctor {
             { 1,  0}  // DOWN
         };
 
-        for (auto const&  sh : shifts) 
+        for (auto const& sh : shifts) 
             *result++ = current_state + sh; 
     }
 };
@@ -168,7 +195,7 @@ void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
 
     a_star_search::NodeVisitor<pacman_state_t,
                 PacmanNeighborFunctor, PacmanStateFilter,
-                std::stack<std::shared_ptr<a_star_search::Node<pacman_state_t>>> > pacman_node_visitor( PacmanStateFilter{r, c, grid} );
+                std::stack<a_star_search::NodePtr<pacman_state_t>> > pacman_node_visitor( PacmanStateFilter{r, c, grid} );
 
     a_star_search::a_star<pacman_state_t> ( 
             {pacman_r, pacman_c},
@@ -216,6 +243,44 @@ void pacman_bfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
     for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
         std::cout << r_it->first  << " " << r_it->second << std::endl;
 }
+
+
+void pacman_ucs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector<std::string> const& grid) {
+    std::vector<pacman_state_t> result_path; 
+    std::vector<pacman_state_t> explored_node; 
+
+#if 0
+    struct {
+        int food_r_, food_c_;
+        int operator() (pacman_state_t const& s) { return (s.first == food_r_ && s.second == food_c_) ? 1 : 0; }
+    } ucs_heuristic {food_r, food_c};
+#endif
+
+    auto ucs_heuristic = [ &food_r, &food_c ] ( pacman_state_t const& s ) { return (s.first == food_r && s.second == food_c) ? 1 : 0; };
+
+    struct UCSComparator{
+        bool operator() ( pacman_node_t const l, pacman_node_t const r ) { return l->get_h_score() < r->get_h_score(); }
+    };
+
+    a_star_search::NodeVisitor<pacman_state_t,
+        PacmanNeighborFunctor, PacmanStateFilter,
+        std::priority_queue<pacman_node_t, std::vector<pacman_node_t>, UCSComparator>,
+        ucs_heuristic> pacman_node_visitor(PacmanStateFilter{r, c, grid});
+
+    a_star_search::a_star<pacman_state_t> ( 
+            {pacman_r, pacman_c},
+            {food_r, food_c},
+            pacman_node_visitor,
+            std::back_inserter(result_path),
+            std::back_inserter(explored_node)
+          );
+
+    //print path length and path
+    std::cout << result_path.size()-1 << std::endl;
+    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
+        std::cout << r_it->state_.first  << " " << r_it->state_.second << std::endl;
+}
+
 } //pacman_task
 
 template <typename TSolveFunction>
