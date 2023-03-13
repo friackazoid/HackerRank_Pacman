@@ -18,7 +18,7 @@ struct DefaultHeuristic {
 template < typename TState,
            typename TScore = int >
 class Node {
-   // cost to go from start node to this node
+    // cost to go from start node to this node
     TScore g_score_;
     // the value of the state
     TScore h_score_;
@@ -62,7 +62,7 @@ public:
 #if __cplusplus  > 201402L
     using TNode = Node<TState, std::invoke_result_t<FHeuristic, TState>>;
 #else 
-    using TNode = Node<TState, std::result_of<FHeuristic(TState)>>;
+    using TNode = Node<TState, std::result_of_t<FHeuristic(TState)>>;
 #endif
 
 private:
@@ -104,7 +104,7 @@ public:
         visited_.insert(node->state_);
     }
 
-    auto pop () {
+    std::shared_ptr<TNode> pop () {
         auto tmp = pop_impl(c_);
         c_.pop();
         return tmp; 
@@ -114,11 +114,13 @@ public:
 template <typename TState, 
          typename TNodeVisitor,
          typename TResultPathIterator,
-         typename TExploredNodeIterator = std::void_t<>>
+         typename TExploredNodeIterator> 
+         //typename TExploredNodeIterator = std::void_t<>>
 void a_star ( TState const& start, TState const& goal,
               TNodeVisitor& node_visitor,
               TResultPathIterator result_path_it,
-              TExploredNodeIterator explored_node_it = TExploredNodeIterator() ) {
+              TExploredNodeIterator explored_node_it) {
+              //TExploredNodeIterator explored_node_it = TExploredNodeIterator() ) {
 
     using TNode = typename TNodeVisitor::TNode; //Node<TState>;
     //using TNodePtr = std::shared_ptr<TNode>;
@@ -130,7 +132,7 @@ void a_star ( TState const& start, TState const& goal,
         node_it = node_visitor.pop();
 
         // add node to the set of explored node if given
-        if constexpr ( std::is_same<TExploredNodeIterator, void>::value )
+        // if constexpr ( std::is_same<TExploredNodeIterator, void>::value )
             *explored_node_it++ = node_it->state_;
 
         if (node_it->state_ == goal) 
@@ -282,6 +284,37 @@ void pacman_ucs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
         std::cout << r_it->first  << " " << r_it->second << std::endl;
 }
 
+void pacman_astar_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector<std::string> const& grid) {
+    std::vector<pacman_state_t> result_path; 
+    std::vector<pacman_state_t> explored_node; 
+
+    struct UCSHeuristic {
+        int food_r_, food_c_;
+        int operator() (pacman_state_t const& s) { return (s.first == food_r_ && s.second == food_c_) ? 1 : 0; }
+    } ;
+
+    struct UCSComparator{
+        bool operator() ( pacman_node_t const l, pacman_node_t const r ) { return l->get_total_score() < r->get_total_score(); }
+    };
+
+    a_star_search::NodeVisitor<pacman_state_t,
+        PacmanNeighborFunctor, PacmanStateFilter,
+        std::priority_queue<pacman_node_t, std::vector<pacman_node_t>, UCSComparator>,
+        UCSHeuristic> pacman_node_visitor(PacmanStateFilter{r, c, grid}, UCSHeuristic{food_r, food_c});
+
+    a_star_search::a_star<pacman_state_t> ( 
+            {pacman_r, pacman_c},
+            {food_r, food_c},
+            pacman_node_visitor,
+            std::back_inserter(result_path),
+            std::back_inserter(explored_node)
+          );
+
+    //print path length and path
+    std::cout << result_path.size()-1 << std::endl;
+    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
+        std::cout << r_it->first  << " " << r_it->second << std::endl;
+}
 } //pacman_task
 
 template <typename TSolveFunction>

@@ -7,7 +7,7 @@ add_compile_options(-Wall -Werror -Wno-error=maybe-uninitialized
     $<$<CONFIG:DEBUG>:-O0>
     $<$<CONFIG:DEBUG>:-ggdb3>
 )
-add_compile_options(-std=c++17 -g -O0)
+add_compile_options(-std=c++14 -g -O0)
 
 add_executable(pacman pacman.cpp)
 add_executable(pacman_dfs pacman_dfs.cpp)
