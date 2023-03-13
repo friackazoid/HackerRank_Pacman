@@ -9,25 +9,19 @@
 
 namespace a_star_search {
 
-template <typename T = int>
+template <typename TState, typename T = int>
 struct DefaultHeuristic {
-    T operator()() { return T(0); }
+    T operator()( TState const& s ) { return T(0); }
 };
 
 //TODO: TState shoudl have operator== 
-// The heuristic has been specified for the Node instead of the TState,
-// allowing specify TState as generic type
 template < typename TState,
-           typename FHeuristic = DefaultHeuristic<>,
-           typename TScore = std::invoke_result_t<FHeuristic> >
+           typename TScore = int >
 class Node {
-    FHeuristic heuristic_;
-
    // cost to go from start node to this node
     TScore g_score_;
     // the value of the state
     TScore h_score_;
-    //TScore total_score_;
 
 public:
     using value_type = TState;
@@ -39,16 +33,19 @@ public:
     Node() = delete;
     Node( Node const& ) = delete;
     
-    Node(TState state) : g_score_(0) 
-                       , h_score_( heuristic_() )
-                       , state_(state)
-                       , parent_(nullptr) {};
+    Node(TState state, TScore h_score = TScore(0)) : g_score_(0)
+                                                   , h_score_(h_score)
+                                                   , state_(state)
+                                                   , parent_(nullptr) {}; 
 
-    Node(TState state, std::shared_ptr<Node> parent) : g_score_(parent->g_score_ + 1)
-                                                     , h_score_( heuristic_() )  
-                                                     , state_(state)
-                                                     , parent_(parent) {};
-    TScore get_h_score() const {return h_score_;};
+    Node(TState state, 
+         std::shared_ptr<Node> parent,
+         TScore h_score = TScore(0)) : g_score_(parent->g_score_ + 1)
+                                     , h_score_(h_score)
+                                     , state_(state)
+                                     , parent_(parent) {};
+
+    TScore get_total_score() const {return h_score_ + g_score_;};
 };
 
 template <typename TState>
@@ -58,13 +55,19 @@ template < typename TState,
            typename FGetNeighbors,
            typename FFilter,
            typename TContainer = std::queue<NodePtr<TState>>,
-           typename FHeuristic = DefaultHeuristic<int>>
-class NodeVisitor 
+           typename FHeuristic = DefaultHeuristic<TState, int>>
+class NodeVisitor {
+public:
+
+#if __cplusplus  > 201402L
+    using TNode = Node<TState, std::invoke_result_t<FHeuristic, TState>>;
+#else 
+    using TNode = Node<TState, std::result_of<FHeuristic(TState)>>;
+#endif
+
 private:
-
-    using TNode = Node<TState, FHeuristic>;
-
     FFilter filter_;
+    FHeuristic heuristic_;
     TContainer c_{};
     FGetNeighbors get_neighbors_;
     std::set<TState, std::less<>> visited_;
@@ -82,14 +85,16 @@ private:
 public:
     NodeVisitor () = delete;
     NodeVisitor (NodeVisitor const&) = delete;
-    NodeVisitor ( FFilter const& filter ) : filter_(filter) {};
+    NodeVisitor (FFilter const& filter ) : filter_(filter) {};
+    NodeVisitor (FFilter const& filter, FHeuristic const& heuristic ) : filter_(filter)
+                                                                      , heuristic_(heuristic) {};
 
     void visit_neighbors (std::shared_ptr<TNode> const& current_node) {
         std::vector<TState> neighbors;
         get_neighbors_( current_node->state_, std::back_inserter(neighbors) );
 
         for (auto const& n : neighbors)
-            if (filter_(n) && !isVisited(n)) push(std::make_shared<TNode>(n, current_node));
+            if (filter_(n) && !isVisited(n)) push(std::make_shared<TNode>(n, current_node, heuristic_(n) ));
     };
 
     bool empty () const { return c_.empty(); } 
@@ -115,7 +120,7 @@ void a_star ( TState const& start, TState const& goal,
               TResultPathIterator result_path_it,
               TExploredNodeIterator explored_node_it = TExploredNodeIterator() ) {
 
-    using TNode = Node<TState>;
+    using TNode = typename TNodeVisitor::TNode; //Node<TState>;
     //using TNodePtr = std::shared_ptr<TNode>;
 
     node_visitor.push(std::make_shared<TNode> (start));
@@ -249,23 +254,19 @@ void pacman_ucs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
     std::vector<pacman_state_t> result_path; 
     std::vector<pacman_state_t> explored_node; 
 
-#if 0
-    struct {
+    struct UCSHeuristic {
         int food_r_, food_c_;
         int operator() (pacman_state_t const& s) { return (s.first == food_r_ && s.second == food_c_) ? 1 : 0; }
-    } ucs_heuristic {food_r, food_c};
-#endif
-
-    auto ucs_heuristic = [ &food_r, &food_c ] ( pacman_state_t const& s ) { return (s.first == food_r && s.second == food_c) ? 1 : 0; };
+    } ;
 
     struct UCSComparator{
-        bool operator() ( pacman_node_t const l, pacman_node_t const r ) { return l->get_h_score() < r->get_h_score(); }
+        bool operator() ( pacman_node_t const l, pacman_node_t const r ) { return l->get_total_score() < r->get_total_score(); }
     };
 
     a_star_search::NodeVisitor<pacman_state_t,
         PacmanNeighborFunctor, PacmanStateFilter,
         std::priority_queue<pacman_node_t, std::vector<pacman_node_t>, UCSComparator>,
-        ucs_heuristic> pacman_node_visitor(PacmanStateFilter{r, c, grid});
+        UCSHeuristic> pacman_node_visitor(PacmanStateFilter{r, c, grid}, UCSHeuristic{food_r, food_c});
 
     a_star_search::a_star<pacman_state_t> ( 
             {pacman_r, pacman_c},
@@ -278,7 +279,7 @@ void pacman_ucs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
     //print path length and path
     std::cout << result_path.size()-1 << std::endl;
     for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
-        std::cout << r_it->state_.first  << " " << r_it->state_.second << std::endl;
+        std::cout << r_it->first  << " " << r_it->second << std::endl;
 }
 
 } //pacman_task
@@ -304,7 +305,8 @@ void read_data( TSolveFunction const& solve_function ) {
 int main(void) {
 
 //    read_data<decltype(pacman_task::pacman_dfs_solve)> (pacman_task::pacman_dfs_solve);
-    read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
+//    read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
+      read_data<decltype(pacman_task::pacman_ucs_solve)> (pacman_task::pacman_ucs_solve);    
 
     return 0;
 }
