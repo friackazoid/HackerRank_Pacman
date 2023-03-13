@@ -33,12 +33,6 @@ bool operator< (Node const& lv, Node const& rv) {
 bool operator<(const std::pair<int, int> &lk, const std::pair<int, int> &rk) { 
     return lk.first < rk.first ? true : lk.second < rk.second; 
 }
-//
-//struct PairHash {
-//    std::size_t operator() (std::pair<int,int> const& p) const {
-//        return p.first*42+p.second;
-//    }
-//};
 
 bool ifTraversable (char c) {   
     return c == '-' || c == '.';
@@ -69,9 +63,7 @@ std::pair<int, int> shiftTo (const std::pair<int, int>& current_pos, const std::
 }
 
 int distance ( const std::pair<int, int>& s, std::pair<int, int> const& d) {
-
     return std::abs(s.first - d.first) + std::abs(s.second - d.second);
-
 }
 
 void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, vector <string> grid){
@@ -88,7 +80,6 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
     
     std::shared_ptr<Node> parent_it = root;
     std::shared_ptr<Node> node_it;
-    //int tmp_count{0};
     //auto search_time_start = std::chrono::high_resolution_clock::now();
     while ( !queue.empty() ) {
         
@@ -96,9 +87,6 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
         queue.pop();
         explored.push_back( node_it->cell_ );
 
-        //if (isVisited(visited, node_it->cell_))
-        //    continue; 
-        
         if (isGoal(node_it->cell_, {food_r, food_c} )) 
             break;
         
@@ -108,12 +96,8 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
             if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
-
-
-                    auto new_node = std::make_shared<Node>(new_pos.first, new_pos.second, node_it, distance( {pacman_r, pacman_c}, new_pos ) + distance(new_pos, {food_r, food_c}) );
-
-                    queue.push( new_node );
-                    visited.insert(new_node->cell_);
+                    queue.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it, distance( {pacman_r, pacman_c}, new_pos ) + distance(new_pos, {food_r, food_c}) ) );
+                    visited.insert(new_pos);
                 }
             }
         }
