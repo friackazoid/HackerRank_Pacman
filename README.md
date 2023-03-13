@@ -9,7 +9,7 @@ In the challenge is was required to implement various planning algorithms-
 - `pacman_astar.cpp` - uses more complicated heuristic function. (https://www.hackerrank.com/challenges/pacman-astar?isFullScreen=true&hr_b=1)
 - `pacman_npuzzle.cpp` - uses A* algorithm to solve classic N-puzzle problem. With proposed heuristic it solves all HackerRank tasks.
 
-`pacman.cpp` - is a templated implementation that can pass any challenge
+`pacman.cpp` - is a templated implementation that can pass any challenge. Please note that the code may contain certain flaws, such as having all the code in a single module and not utilizing the latest features, due to the limitations of the HackerRank platform.
 
 # Usage
 To run any of the above algorithms, you can simply build and execute the respective file. Follow the steps below to build the files:
