@@ -23,6 +23,7 @@ public:
 public: 
     Node() = delete;
     Node( Node const& ) = delete;
+    Node( Node&& ) = delete;
     
     Node(TState state) : state_(state)
                        , parent_(nullptr) {}; 
@@ -216,11 +217,11 @@ void pacman_dfs_bfs_solve (int r, int c, std::vector<std::string> const& grid,
 }
 
 void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-    pacman_dfs_bfs_solve<std::queue<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
+    pacman_dfs_bfs_solve<std::stack<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
 }
 
 void pacman_bfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-    pacman_dfs_bfs_solve<std::stack<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
+    pacman_dfs_bfs_solve<std::queue<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
 }
 
 template <typename TSolveFunction>
@@ -245,8 +246,8 @@ void read_data( TSolveFunction const& solve_function ) {
 
 int main(void) {
 
-//    pacman_task::read_data<decltype(pacman_task::pacman_dfs_solve)> (pacman_task::pacman_dfs_solve);
-    pacman_task::read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
+    pacman_task::read_data<decltype(pacman_task::pacman_dfs_solve)> (pacman_task::pacman_dfs_solve);
+//    pacman_task::read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
 //
 
     return 0;
