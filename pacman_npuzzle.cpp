@@ -138,7 +138,6 @@ void nextMove( size_t k, Node::state_t const& start){
     std::shared_ptr<Node> node_it;
     //auto search_time_start = std::chrono::high_resolution_clock::now();
     while ( !queue.empty() ) {
-        
         node_it = queue.top();
         queue.pop();
 
@@ -156,13 +155,8 @@ void nextMove( size_t k, Node::state_t const& start){
                 std::swap( new_state[curr_pos.first][curr_pos.second], new_state[new_pos.first][new_pos.second] );
 
                 if ( !isVisited(visited, new_state) ) {
-
-                   auto new_node = std::make_shared<Node>(new_state, node_it, direction);
-                   //std::cout << "Add new_node with cost: " << new_node->cost_ << std::endl;
-                   //new_node->print_state();
-
-                    queue.push( new_node );
-                    visited.insert(new_node->state_);
+                    queue.push( std::make_shared<Node>(new_state, node_it, direction) );
+                    visited.insert(new_state);
                 }
             }
         }
@@ -191,16 +185,13 @@ void nextMove( size_t k, Node::state_t const& start){
 int main(void) {
 
     int k;
-
     std::cin >> k;
 
     Node::state_t grid(k);
-
     for (int i = 0; i< k; ++i) {
         grid[i].resize(k);
-        for (int j = 0; j < k; ++j) {
+        for (int j = 0; j < k; ++j) 
             std::cin >> grid[i][j];
-        }
     }
 
     nextMove(k, grid);
