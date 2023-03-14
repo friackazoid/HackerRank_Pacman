@@ -10,6 +10,7 @@ add_compile_options(-Wall -Werror -Wno-error=maybe-uninitialized
 add_compile_options(-std=c++14 -g -O0)
 
 add_subdirectory(step_0_naive_solution)
+add_subdirectory(step_1_dfs_bfs_solution)
 
 add_executable(pacman pacman.cpp)
 
