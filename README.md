@@ -3,7 +3,7 @@ This repository contains code for various planning algorithms implemented for [H
 
 
 In the challenge is was required to implement various planning algorithms- 
-- `pacman_dfs.cpp` - is implementation of the Deep First Search (https://www.hackerrank.com/challenges/pacman-bfs?isFullScreen=true&hr_b=1).
+- `pacman_dfs.cpp` - is implementation of the Deep First Search (https://www.hackerrank.com/challenges/pacman-bfs?isFullScreen=true&hr_b=1). Result: https://www.hackerrank.com/showgame/9101149
 - `pacman_bfs.cpp` - is implementation of the Breadth First Search
 - `pacman_ucs.cpp` - is a variation of Cheapest First Search, with uniform cost. (https://www.hackerrank.com/challenges/pacman-ucs?isFullScreen=true&hr_b=1)
 - `pacman_astar.cpp` - uses more complicated heuristic function. (https://www.hackerrank.com/challenges/pacman-astar?isFullScreen=true&hr_b=1)
