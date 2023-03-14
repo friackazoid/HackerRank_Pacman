@@ -6,6 +6,7 @@
 #include <queue>
 #include <memory>
 #include <type_traits>
+#include <algorithm>
 
 namespace a_star_search {
 
@@ -196,25 +197,34 @@ struct PacmanStateFilter {
     }
 };
 
-void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-    std::vector<pacman_state_t> result_path; 
-    std::vector<pacman_state_t> explored_nodes;
+template <typename TQueue>
+void pacman_solve ( int r, int c, std::vector<std::string> const& grid,
+        pacman_state_t const& start, pacman_state_t const& goal,
+        std::vector<pacman_state_t>& result_path, std::vector<pacman_state_t>& explored_nodes ) {
 
-    a_star_search::NodeVisitor<pacman_state_t,
-                PacmanNeighborFunctor, PacmanStateFilter,
-                std::stack<a_star_search::NodePtr<pacman_state_t>> > pacman_node_visitor( PacmanStateFilter{r, c, grid} );
+    a_star_search::NodeVisitor <pacman_state_t,
+        PacmanNeighborFunctor, PacmanStateFilter, TQueue> pacman_node_visitor( PacmanStateFilter{r, c, grid} );
 
     a_star_search::a_star<pacman_state_t> ( 
-            {pacman_r, pacman_c},
-            {food_r, food_c},
+            start, goal,
             pacman_node_visitor,
             std::back_inserter(result_path),
             std::back_inserter(explored_nodes)
           );
+}
+
+template <typename TQueue>
+void pacman_dfs_bfs_solve (int r, int c, std::vector<std::string> const& grid,
+        pacman_state_t const& start, pacman_state_t const& goal) {
+
+    std::vector<pacman_state_t> result_path; 
+    std::vector<pacman_state_t> explored_nodes;
+    
+    pacman_solve<TQueue>(r, c, grid, start, goal, result_path, explored_nodes );
 
     // print number of explored nodes
     std::cout << explored_nodes.size() << std::endl;
-    // print Tree
+    // print spanning Tree
     for (const auto& it: explored_nodes)
         std::cout << it.first << " " << it.second << std::endl;
     
@@ -225,30 +235,13 @@ void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, in
         std::cout << r_it->first  << " " << r_it->second << std::endl;
 }
 
-void pacman_bfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
-    std::vector<pacman_state_t> result_path; 
-    std::vector<pacman_state_t> explored_nodes;
-
-    a_star_search::NodeVisitor<pacman_state_t,
-                PacmanNeighborFunctor, PacmanStateFilter> pacman_node_visitor( PacmanStateFilter{r, c, grid} );
-
-    a_star_search::a_star<pacman_state_t> ( 
-            {pacman_r, pacman_c},
-            {food_r, food_c},
-            pacman_node_visitor,
-            std::back_inserter(result_path),
-            std::back_inserter(explored_nodes)
-          );
-
-    // print number of explored nodes and the tree
-    std::cout << explored_nodes.size() << std::endl;
-    for (const auto& it: explored_nodes)
-        std::cout << it.first << " " << it.second << std::endl;
+void pacman_dfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
     
-    //print path length and path
-    std::cout << result_path.size()-1 << std::endl;
-    for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
-        std::cout << r_it->first  << " " << r_it->second << std::endl;
+    pacman_dfs_bfs_solve<std::queue<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
+}
+
+void pacman_bfs_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std::vector <std::string> grid) {
+    pacman_dfs_bfs_solve<std::stack<pacman_node_t>>(r, c, grid, {pacman_r, pacman_c}, {food_r, food_c});
 }
 
 
@@ -318,7 +311,6 @@ void pacman_astar_solve ( int r, int c, int pacman_r, int pacman_c, int food_r, 
     for ( auto r_it = result_path.rbegin(); r_it != result_path.rend(); ++r_it )
         std::cout << r_it->first  << " " << r_it->second << std::endl;
 }
-} //pacman_task
 
 template <typename TSolveFunction>
 void read_data( TSolveFunction const& solve_function ) {
@@ -338,12 +330,87 @@ void read_data( TSolveFunction const& solve_function ) {
     solve_function(r, c, pacman_r, pacman_c, food_r, food_c, grid);
 }
 
+} //pacman_task
+
+
+#if 0
+namespace npuzzle_task {
+using puzzle_state_t = std::vector<std::vector<size_t>>;
+using puzzle_node_t = a_star_search::NodePtr<puzzle_state_t>;
+
+// TODO: make an abstract template
+class PuzzleNeighborFunctor {
+    std::pair<size_t, size_t> __findZero ( puzzle_state_t const& state ) {
+        size_t c_i{0}, c_j{0};
+        size_t k = state.size();
+        for (c_i = 0; c_i < k; ++c_i) {
+            for (c_j = 0; c_j < k; ++c_j) {
+                if ( state[c_i][c_j] == 0 )
+                    return {c_i, c_j};
+            }
+        }
+        return {0, 0};
+    }
+
+public:
+    template <typename TOutputIterator>
+    void operator() ( puzzle_state_t const& current_state, TOutputIterator result  ) {
+
+        auto zero_pos = __findZero(current_state);
+
+        std::vector< std::pair<int, int> > shifts {
+            {-1,  0}, // UP
+            { 0, -1}, // LEFT
+            { 0,  1}, // RIGHT
+            { 1,  0}  // DOWN
+        };
+
+        for (auto sh const& : shifts) 
+    }
+};
+
+void npuzzle_solve ( puzzle_state_t const& start,  puzzle_state_t const& goal) {
+    std::vector<puzzle_state_t> result_path; 
+    std::vector<puzzle_state_t> explored_nodes;
+
+
+}
+
+template <typename TSolveFunction>
+void read_data( TSolveFunction const& solve_function ) {
+    int k;
+    std::cin >> k;
+   
+    puzzle_state_t start (k);
+
+    for (int i = 0; i< k; ++i) {
+        start[i].resize(k);
+        for (int j = 0; j < k; ++j)
+            std::cin >> start[i][j];
+    }
+
+    puzzle_state_t goal(k);
+    auto n = 0;
+    for ( auto& v: goal ) {
+        v.resize(k);
+        std::generate( v.begin(), v.end(), [&n](){ return n++;} );
+    }
+
+    solve_function(start, goal);
+}
+
+} // namespace npuzzle_task
+#endif
+
+
 int main(void) {
 
-//    read_data<decltype(pacman_task::pacman_dfs_solve)> (pacman_task::pacman_dfs_solve);
-//    read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
-//    read_data<decltype(pacman_task::pacman_ucs_solve)> (pacman_task::pacman_ucs_solve);    
-      read_data<decltype(pacman_task::pacman_astar_solve)> (pacman_task::pacman_astar_solve);    
+    pacman_task::read_data<decltype(pacman_task::pacman_dfs_solve)> (pacman_task::pacman_dfs_solve);
+//    pacman_task::read_data<decltype(pacman_task::pacman_bfs_solve)> (pacman_task::pacman_bfs_solve);
+//    pacman_task::read_data<decltype(pacman_task::pacman_ucs_solve)> (pacman_task::pacman_ucs_solve);    
+//    pacman_task::read_data<decltype(pacman_task::pacman_astar_solve)> (pacman_task::pacman_astar_solve);
+//
+//    npuzzle_task::read_data<npuzzle_task::npuzzle_solve> (npuzzle_task::npuzzle_solve); 
 
     return 0;
 }
