@@ -88,7 +88,7 @@ template <typename TState,
          typename TNodeVisitor,
          typename TResultPathIterator,
          typename TExploredNodeIterator> 
-void a_star ( TState const& start, TState const& goal,
+bool a_star ( TState const& start, TState const& goal,
               TNodeVisitor& node_visitor,
               TResultPathIterator result_path_it,
               TExploredNodeIterator explored_node_it) {
@@ -97,22 +97,28 @@ void a_star ( TState const& start, TState const& goal,
 
     node_visitor.push(std::make_shared<TNode> (start));
     
+    bool solution_found = false;
     std::shared_ptr<TNode> node_it;
     while ( !node_visitor.empty()) {
         node_it = node_visitor.pop();
         *explored_node_it++ = node_it->state_;
 
-        if (node_it->state_ == goal) 
+        if (node_it->state_ == goal) {
+            solution_found = true;
             break;
+        }
 
         node_visitor.visit_neighbors( node_it );
     }
 
-    //TODO: process case with no solution
-    while (node_it != nullptr) {
-        *result_path_it++  = node_it->state_;
-        node_it = node_it->parent_;
+    if (solution_found) {
+        while (node_it != nullptr) {
+            *result_path_it++  = node_it->state_;
+            node_it = node_it->parent_;
+        }
     }
+
+    return solution_found;
 }
 
 } // namespace a_star_search
