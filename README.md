@@ -17,3 +17,8 @@ You can find a naive (i.e. a solution that solves the given task exactly) soluti
 - [`pacman_npuzzle.cpp`](https://github.com/friackazoid/HackerRank_Pacman/blob/main/step_0_naive_solution/pacman_npuzzle.cpp); [N Puzzle](https://www.hackerrank.com/challenges/n-puzzle?isFullScreen=true&hr_b=1) - uses A* algorithm to solve classic N-puzzle problem. With proposed heuristic it solves all HackerRank tasks; [result](https://www.hackerrank.com/showgame/9109107)
 
 ## Step 1
+Let's pretend we're a software engineer who received the DFS task first and implemented it naively.
+Then, someone did some research and discovered that BFS is actually much more efficient for this type of task (oops!).
+So, how would this poor programmer modify their code to support both algorithms and leave room for future requests?
+
+And, just for fun, let's hope this engineer learns their lesson about jumping into solutions too quickly in the future!
