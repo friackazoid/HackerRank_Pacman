@@ -136,10 +136,8 @@ pacman_state_t operator+ (pacman_state_t const& lv, pacman_state_t const& rv) {
     return {lv.first + rv.first, lv.second + rv.second};
 }
 
-
 // The function returns the neighbors of the given state
 // in a specific order as required by the Hackerrank task.
-
 template <typename FFilter>
 struct PacmanNeighborFunctor {
     FFilter filter_ = [](pacman_state_t const& ) {return true;};
@@ -162,8 +160,8 @@ struct PacmanNeighborFunctor {
 };
 
 struct PacmanStateFilter {
-    int r_, c_;
-    std::vector<std::string> grid_;
+    int r_{0}, c_{0};
+    std::vector<std::string> grid_{""};
 
     bool operator() ( pacman_state_t const& state ) { 
         if (state.first >= r_|| state.first < 0 || state.second >= c_ || state.second < 0)
