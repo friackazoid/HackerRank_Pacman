@@ -33,9 +33,18 @@ Let's pretend we've learned our lesson about jumping into solutions too quickly 
 We can then split them into two categories: those that are about A* search and those that are domain-oriented.
 
 Let not allow as get into a trap then find all algorithms that we actually use in code 
-- a_star itself
-- 
+- [a* itself](https://github.com/friackazoid/HackerRank_Pacman/blob/dfs-bfs-1-step/step_0_naive_solution/pacman_bfs.cpp#L54)
+- [get neighbours](https://github.com/friackazoid/HackerRank_Pacman/blob/dfs-bfs-1-step/step_0_naive_solution/pacman_bfs.cpp#L38)
+- [check if traversable](https://github.com/friackazoid/HackerRank_Pacman/blob/dfs-bfs-1-step/step_0_naive_solution/pacman_bfs.cpp#L26)
 
+All other logic, such as checking that the state has not been visited yet and the ordering of visiting, is provided by the container we use. 
+
+It is also necessary to note that the object we use as TState should have defined `<` and `==` operators.
+The author intended to use C++20 [Constraints and concepts](https://en.cppreference.com/w/cpp/language/constraints), but as we intend to test our code with HackerRank, which does not yet support C++20, we will save that for the next iteration of posts.
+
+Here we can observe that although "getting neighbors" is a fundamental part of the A* algorithm, its implementation is specific to the domain.
+Furthermore, the visited container is exclusively used within the A* algorithm.
+Therefore, we can take advantage of static polymorphism by specifying the algorithm with domain-specific functions as template parameters.
 
 And the here we are [`pacman_bfs_dfs.cpp`](https://github.com/friackazoid/HackerRank_Pacman/blob/dfs-bfs-1-step/step_1_dfs_bfs_solution/pacman_bfs_dfs.cpp)
 
