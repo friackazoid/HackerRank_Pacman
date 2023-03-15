@@ -1,0 +1,1 @@
+add_executable(pacman_bfs_dfs pacman_bfs_dfs.cpp)
