@@ -12,7 +12,7 @@ namespace a_star_search {
 
 template <typename TState, typename T = int>
 struct DefaultHeuristic {
-    T operator()( TState const& s ) { return T(0); }
+    T operator()( TState const& ) { return T(0); }
 };
 
 //TODO: TState shoudl have operator== 

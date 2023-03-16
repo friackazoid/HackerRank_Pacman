@@ -149,7 +149,7 @@ void nextMove( size_t k, Node::state_t const& start){
         
         for (const auto& direction : std::vector<std::string>{"UP", "LEFT", "RIGHT", "DOWN"}) { 
             auto new_pos = shiftTo(curr_pos, direction);
-            if ( new_pos.first < k && new_pos.second < k && new_pos.first >= 0 && new_pos.second >= 0 ) {
+            if ( new_pos.first < k && new_pos.second < k && new_pos.first > 0 && new_pos.second > 0 ) {
                 
                 auto new_state(curr_state);
                 std::swap( new_state[curr_pos.first][curr_pos.second], new_state[new_pos.first][new_pos.second] );

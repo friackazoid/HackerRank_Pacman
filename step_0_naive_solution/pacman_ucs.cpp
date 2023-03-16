@@ -89,8 +89,10 @@ void nextMove( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c,
         for (const auto& direction : std::vector<std::string>{"UP", "LEFT", "RIGHT", "DOWN"}) {
             
             auto new_pos = shiftTo(node_it->cell_, direction);
-            if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
-                
+            if ((new_pos.first < r && new_pos.first >= 0) 
+                    && (new_pos.second < c && new_pos.second >= 0)
+                    && ifTraversable (grid[new_pos.first][new_pos.second]) ) {
+               
                 if ( !isVisited(visited, new_pos) ) {
                     queue.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it, isGoal(new_pos, {food_r, food_c}) ? 1 : 0 ) );
                     visited.insert(new_pos);

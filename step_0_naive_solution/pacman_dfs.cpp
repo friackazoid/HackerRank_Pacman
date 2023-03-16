@@ -70,7 +70,9 @@ void dfs( int r, int c, int pacman_r, int pacman_c, int food_r, int food_c, std:
         
         for (const auto& direction : std::vector<std::string>{"UP", "LEFT", "RIGHT", "DOWN"}) {
             auto new_pos = shiftTo(node_it->cell_, direction);
-            if ( ifTraversable( grid[new_pos.first][new_pos.second] ) ) {
+            if ((new_pos.first < r && new_pos.first >= 0) 
+                    && (new_pos.second < c && new_pos.second >= 0)
+                    && ifTraversable (grid[new_pos.first][new_pos.second]) ) {
                 
                 if ( !isVisited(visited, new_pos) ) {
                     stack.push( std::make_shared<Node>(new_pos.first, new_pos.second, node_it) );
