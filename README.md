@@ -51,3 +51,29 @@ And the here we are [`pacman_bfs_dfs.cpp`](https://github.com/friackazoid/Hacker
 And tests:
 - [DFS](https://www.hackerrank.com/showgame/9119550)
 - [BFS](https://www.hackerrank.com/showgame/9119552)
+
+## Step 1.5
+
+As has been said in previous post author was intended to use C++20 features but was stopped 
+The good first step to start thinking about software architecture that author like to use is 
+- first define objects with which  code deals and find a type for the object
+C++20 has shiny new feature that expected to help us specify type as precise as it can be. 
+
+In code to solve bfs and dfs there is we work with type TState, which user can define. 
+With help of metaprogramming user allowed to use trivial std or self defined types to specify state space of the task
+But the code has some expectation to the type. let see what happens if we break such expectations
+
+Let solve the pacman task without knowledge about such requiments and let define our own type to prepresent point...
+example_2 (short TODO: how to see an error )
+
+
+
+Let introduce  
+
+...
+
+in our implementation we are lying on std::set to find if state was visited; that is discusible proposal but here we will not speack about flawns and other solution, rather about how we can use c++20 to find out miusage at very begging
+
+
+- constraint types we want use as TState
+    - algorithm requires that satisfy triangle requiments
