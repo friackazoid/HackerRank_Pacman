@@ -1,7 +1,7 @@
-#include <ios>
 #include <iostream>
 
 #include <iterator>
+#include <utility>
 #include <vector>
 #include <set>
 #include <stack>
@@ -14,7 +14,17 @@
 namespace a_star_search {
 
 template <typename T> 
-concept StateSpaceEl = std::equality_comparable<T>;
+concept StateSpaceEl = std::totally_ordered<T>;
+
+template <typename Container>
+concept ContainerWithOrder = requires (Container c, typename Container::value_type const& el) 
+                    { c.push(el); c.pop();} 
+                    && (requires (Container c) { {c.front()} -> std::convertible_to <typename Container::value_type>; } 
+                    ||  requires (Container c) { {c.top()}   -> std::convertible_to <typename Container::value_type>; });
+
+template <typename F, typename TState>
+concept GetNeighborsFunction = /*std::regular_invocable<F, TState>; && */
+                               requires (F&& f, TState&& state) { {f(state)} -> std::same_as< std::vector<TState> >;  };
 
 template <StateSpaceEl TState>
 class Node {
@@ -41,8 +51,8 @@ public:
 };
 
 template < StateSpaceEl TState,
-           typename TContainer,
-           typename FGetNeighbors >
+           ContainerWithOrder TContainer,
+           GetNeighborsFunction<TState> FGetNeighbors >
 class NodeVisitor {
 public:
 
@@ -74,8 +84,9 @@ public:
     void visit_neighbors (std::shared_ptr<TNode> const& current_node) {
         std::vector<TState> neighbors = get_neighbors_( current_node->state_);
 
-        for (auto const& n : neighbors)
+        for (auto const& n : neighbors) {
             if (!isVisited(n)) push(std::make_shared<TNode>(n, current_node ));
+        }
     };
 
     bool empty () const { return c_.empty(); } 
@@ -162,19 +173,50 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 
 } //namespace example_1
 
-
-#if 1
+#if 0
 namespace example_2 {
 struct example_state_t {
-    int x{-1}, y{-1};
+    int _row{-1}, _column{-1};
 };
+
+
+#if 0 // Define 1 to fix
+bool operator== (example_state_t const& l, example_state_t const& r) {
+    return (l._row == r._row) && (l._column == r._column);
+}
+
+bool operator< (example_state_t const& l, example_state_t const& r) {
+    return (l._row < r._row) ? true : l._column < r._column;
+}
+
+bool operator<= (example_state_t const& l, example_state_t const& r) {
+    return (l < r) || (l == r);
+}
+
+bool operator> (example_state_t const& l, example_state_t const& r) {
+    return (l._row > r._row) ? true : l._column > r._column;
+}
+
+bool operator>= (example_state_t const& l, example_state_t const& r) {
+    return (l > r) || (l == r);
+}
+#endif
 
 using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type; 
 
 void example_solve ( example_state_t const& start, example_state_t const& goal ) {
     auto example_get_neighbors = 
         []( example_state_t const& s ) -> std::vector<example_state_t> {
-            return {{s.x - 1, s.y }, {s.x, s.y-1}, {s.x+1, s.y}, {s.x, s.y+1} };
+            return {
+                {s._row - 1, s._column    }, // NORTH
+                //{s._row - 1, s._column - 1}, // NORTH OST
+                {s._row,     s._column - 1}, // OST
+                //{s._row + 1, s._column - 1}, // SOUTH OST 
+                {s._row + 1, s._column    }, // SOUTH
+                //{s._row + 1, s._column + 1}, // SOUTH WEST
+                {s._row    , s._column + 1}, // WEST
+               // {s._row - 1, s._column + 1}  // NORTH WEST
+            };
         };
 
     //NOTE: fun fact with dfs solution the path not found in not limited space
@@ -188,11 +230,11 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 
     std::cout << std::boolalpha << "Task is solved: " << is_solved << "(" << result_path.size() << ")" << std::endl;
     for (const auto& p : result_path )
-        std::cout << "[" << p.x  << " " << p.y << "] ";
+        std::cout << "[" << p._row << " " << p._column << "] ";
 
-    std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
-    for (const auto& p : explored_nodes )
-        std::cout << "[" << p.x  << " " << p.y << "] ";
+    //std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
+    //for (const auto& p : explored_nodes )
+    //    std::cout << "[" << p._row << " " << p._column << "] ";
 
     std::cout << std::endl;
 }
@@ -200,12 +242,50 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 } //namespace example_1
 #endif
 
+#if 1
+namespace example_3 {
+using example_state_t = int;
+using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type; 
+
+void example_solve ( example_state_t const& start, example_state_t const& goal ) {
+#if 0
+    auto example_get_neighbors_wrong = 
+        []( example_state_t const& s ) -> example_state_t {return  s+1;};
+#endif
+
+    auto example_get_neighbors_correct = 
+        []( example_state_t const& s ) -> std::vector<example_state_t> {return {s+1};};
+
+    a_star_search::NodeVisitor<example_state_t, 
+        std::priority_queue<example_node_t>,
+        decltype(example_get_neighbors_correct)> example_node_visitor( example_get_neighbors_correct);
+
+    std::vector<example_state_t> result_path, explored_nodes;
+    auto is_solved = a_star_search::a_star ( start, goal, example_node_visitor, 
+                          std::back_inserter(result_path), std::back_inserter(explored_nodes) );
+
+    std::cout << std::boolalpha << "Task is solved: " << is_solved << "(" << result_path.size() << ")" << std::endl;
+    for (const auto& p : result_path )
+        std::cout << p  << " ";
+
+    std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
+    for (const auto& p : explored_nodes )
+        std::cout << p  << " ";
+
+    std::cout << std::endl;
+}
+
+} //namespace example_3
+#endif
+
 
 int main(void) {
 
-    example_1::example_solve(1,-5);
+    //example_1::example_solve(1,-5);
 
-    example_2::example_solve( {0,0}, {5,5} ); 
+    //example_2::example_solve( {0,0}, {5,5} );
+    
+    example_3::example_solve(1,5);  
 
     return 0;
 }
