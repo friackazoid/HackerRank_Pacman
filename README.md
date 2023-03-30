@@ -54,10 +54,10 @@ And tests:
 
 ## Step 1.5
 
-As has been said in previous post author was intended to use C++20 features but was stopped 
-The good first step to start thinking about software architecture that author like to use is 
-- first define objects with which  code deals and find a type for the object
-C++20 has shiny new feature that expected to help us specify type as precise as it can be. 
+The author had initially planned to utilize the new C++20 feature known as "concepts" in their code.
+According to the official definition on [cppref](https://en.cppreference.com/w/cpp/language/constraints), concepts are intended to model semantic categories.
+This got the author thinking about the semantic category of their search algorithm.
+
 
 In code to solve bfs and dfs there is we work with type TState, which user can define. 
 With help of metaprogramming user allowed to use trivial std or self defined types to specify state space of the task
@@ -65,15 +65,33 @@ But the code has some expectation to the type. let see what happens if we break 
 
 Let solve the pacman task without knowledge about such requiments and let define our own type to prepresent point...
 example_2 (short TODO: how to see an error )
+Regarding first error 
+`/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1.cpp:181:43:   required from here            
+/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1.cpp:109:29: error: no match for ‘operator==’ (operand types are ‘example_2::example_state_t’ and ‘const value_type’ {aka ‘const example_2::example_state_t’})    
+  109 |         if (node_it->state_ == goal) {
+      |             ~~~~~~~~~~~~~~~~^~~~~~~`
+
+
+And second Error
+`
+/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1_cpp20.cpp:190:43:   required from here      
+/usr/include/c++/11/bits/stl_function.h:400:20: error: no match for ‘operator<’ (operand types are ‘const example_2::example_state_t’ and ‘const example_2::example_state_t’)                                                             
+  400 |       { return __x < __y; }                                                                                                                                                                                                       
+      |                ~~~~^~~~~      
+`
+
+This is our contracts/requiments that are exists in code in undefined manner. We can define it clearly by writing our own concept or using the one from the std library
+
+Let use  concept `std::totally_ordered ` we see that concept is not satisfied and error is much clear
+
+What other requirements has the code. In Visitor we expect  certain syntax - container has pop, push top or front - and symantic - container define the order in which neighbours are visited - 
+
+But how to explin all such requiments to the user in clear form so let make such complicated `concept ContainerWithOrder`
+
+What else can user make wrong 
+
+Get neighbours functions, what if user make function that return only one neighbor;  - let specify what we are waiting from user
 
 
 
-Let introduce  
-
-...
-
-in our implementation we are lying on std::set to find if state was visited; that is discusible proposal but here we will not speack about flawns and other solution, rather about how we can use c++20 to find out miusage at very begging
-
-
-- constraint types we want use as TState
-    - algorithm requires that satisfy triangle requiments
+- let specify interfaces for result path and explored nodes as std::output_iterator
