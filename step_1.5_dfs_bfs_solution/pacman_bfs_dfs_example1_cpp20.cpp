@@ -14,13 +14,14 @@
 namespace a_star_search {
 
 template <typename T> 
-concept StateSpaceEl = std::totally_ordered<T>;
+concept StateSpaceEl = requires ( T t ) {
+    std::set<T> {t};
+};
 
 template <typename Container>
-concept ContainerWithOrder = requires (Container c, typename Container::value_type const& el) 
-                    { c.push(el); c.pop();} 
-                    && (requires (Container c) { {c.front()} -> std::convertible_to <typename Container::value_type>; } 
-                    ||  requires (Container c) { {c.top()}   -> std::convertible_to <typename Container::value_type>; });
+concept ContainerWithOrder = requires (Container c, typename Container::value_type const& el) { c.push(el); c.pop();}  
+                         && (requires (Container c) { {c.front()} -> std::convertible_to <typename Container::value_type>; }
+                         ||  requires (Container c) { {c.top()}   -> std::convertible_to <typename Container::value_type>; });
 
 template <typename F, typename TState>
 concept GetNeighborsFunction = /*std::regular_invocable<F, TState>; && */

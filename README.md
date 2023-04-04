@@ -54,44 +54,20 @@ And tests:
 
 ## Step 1.5
 
-The author had initially planned to utilize the new C++20 feature known as "concepts" in their code.
-According to the official definition on [cppref](https://en.cppreference.com/w/cpp/language/constraints), concepts are intended to model semantic categories.
-This got the author thinking about the semantic category of their search algorithm.
+Let's continue our scenario where I'm a software engineer who has already developed a library of searching algorithms. 
+Let's say we recently had a sprint or two without any new feature requests, and now we've taken on a task of refactoring and improving the quality of our code.
+So let us use ["concepts"](https://en.cppreference.com/w/cpp/language/constraints), feature invented in 20th standart, to prevent bugs that might arise due to improper usage of the library.
+
+After taking a first glance at the documentation and studying a few examples, we've identified some improvements that we can make to our library using C++20 concepts.
 
 
-In code to solve bfs and dfs there is we work with type TState, which user can define. 
-With help of metaprogramming user allowed to use trivial std or self defined types to specify state space of the task
-But the code has some expectation to the type. let see what happens if we break such expectations
+First, we defined concept `StateSpaceEl` that specifies the requirements for types that are passed to our search algorithms.
+Our algorithms requires a type to have a comparisong opirator, and a standart library already has a concept that meets this requiments called `std::totally_ordered`.
+Let specify interfaces for result path and explored nodes as `std::output_iterator`.
 
-Let solve the pacman task without knowledge about such requiments and let define our own type to prepresent point...
-example_2 (short TODO: how to see an error )
-Regarding first error 
-`/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1.cpp:181:43:   required from here            
-/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1.cpp:109:29: error: no match for ‘operator==’ (operand types are ‘example_2::example_state_t’ and ‘const value_type’ {aka ‘const example_2::example_state_t’})    
-  109 |         if (node_it->state_ == goal) {
-      |             ~~~~~~~~~~~~~~~~^~~~~~~`
+Next, the implementation of `NodeVisitor` requires `TContainer`  to support certain interfaice.
+We described this interface in the concept `ContainerWithOrder`. 
 
+Is it it? Is this code now safe from wrong usage?
 
-And second Error
-`
-/home/alina/pacman_cpp/step_1.5_dfs_bfs_solution/pacman_bfs_dfs_example1_cpp20.cpp:190:43:   required from here      
-/usr/include/c++/11/bits/stl_function.h:400:20: error: no match for ‘operator<’ (operand types are ‘const example_2::example_state_t’ and ‘const example_2::example_state_t’)                                                             
-  400 |       { return __x < __y; }                                                                                                                                                                                                       
-      |                ~~~~^~~~~      
-`
-
-This is our contracts/requiments that are exists in code in undefined manner. We can define it clearly by writing our own concept or using the one from the std library
-
-Let use  concept `std::totally_ordered ` we see that concept is not satisfied and error is much clear
-
-What other requirements has the code. In Visitor we expect  certain syntax - container has pop, push top or front - and symantic - container define the order in which neighbours are visited - 
-
-But how to explin all such requiments to the user in clear form so let make such complicated `concept ContainerWithOrder`
-
-What else can user make wrong 
-
-Get neighbours functions, what if user make function that return only one neighbor;  - let specify what we are waiting from user
-
-
-
-- let specify interfaces for result path and explored nodes as std::output_iterator
+Let look at some fun example 
