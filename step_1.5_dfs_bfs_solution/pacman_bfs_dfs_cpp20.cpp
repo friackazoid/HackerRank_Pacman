@@ -135,7 +135,7 @@ bool a_star ( typename TNodeVisitor::TNode::value_type const& start,
     }
 
     return solution_found;
-}
+} 
 
 } // namespace a_star_search
 
