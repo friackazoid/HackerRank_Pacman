@@ -122,6 +122,35 @@ bool a_star ( TState const& start, TState const& goal,
     return solution_found;
 }
 
+template <typename TContainer,
+          typename TState,
+          typename FGetNeighbors,
+          typename TResultPathIterator,
+          typename TExploredNodeIterator> 
+bool a_star_solve(TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, TResultPathIterator result_path_it, TExploredNodeIterator explored_node_it ) {
+    using node_t = typename Node<TState>::node_ptr_type;
+    NodeVisitor<TState, std::stack<node_t>, FGetNeighbors> node_visitor( get_neighbors );
+    return a_star ( start, goal, node_visitor, result_path_it, explored_node_it );
+}
+
+template <typename TState,
+          typename FGetNeighbors,
+          typename TResultPathIterator,
+          typename TExploredNodeIterator> 
+bool dfs_search ( TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, TResultPathIterator result_path_it, TExploredNodeIterator explored_node_it ) {
+    return a_star_solve<std::stack< typename Node<TState>::node_ptr_type> >
+        ( start, goal, get_neighbors, result_path_it, explored_node_it);
+}
+
+template <typename TState,
+          typename FGetNeighbors,
+          typename TResultPathIterator,
+          typename TExploredNodeIterator> 
+bool bfs_search ( TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, TResultPathIterator result_path_it, TExploredNodeIterator explored_node_it ) {
+    return a_star_solve<std::queue< typename Node<TState>::node_ptr_type> >
+        ( start, goal, get_neighbors, result_path_it, explored_node_it);
+}
+
 } // namespace a_star_search
 
 
@@ -198,7 +227,7 @@ void pacman_dfs_bfs_solve (int r, int c, std::vector<std::string> const& grid,
 
     std::vector<pacman_state_t> result_path; 
     std::vector<pacman_state_t> explored_nodes;
-    
+ 
     pacman_solve<TQueue>(r, c, grid, start, goal, result_path, explored_nodes );
 
     // print number of explored nodes
