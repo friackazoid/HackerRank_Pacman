@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include <iterator>
+#include <limits>
 #include <utility>
 #include <vector>
 #include <set>
@@ -24,7 +25,7 @@ concept OrderableContainer =   requires (Container c, typename Container::value_
                            ||  requires (Container c) { {c.top()}   -> std::convertible_to <typename Container::value_type>; });
 
 template <typename F, typename TState>
-concept GetNeighborsFunction = /*std::regular_invocable<F, TState>; && */
+concept GetNeighborsFunction = std::regular_invocable<F, TState> && 
                                requires (F&& f, TState&& state) { {f(state)} -> std::same_as< std::vector<TState> >;  };
 
 template <StateSpaceEl TState>
@@ -80,7 +81,7 @@ public:
     NodeVisitor () = delete;
     NodeVisitor (NodeVisitor const&) = delete;
     NodeVisitor (NodeVisitor&&) = delete;
-    NodeVisitor (FGetNeighbors const& get_neighbors ) : get_neighbors_(get_neighbors) { };
+    NodeVisitor (FGetNeighbors && get_neighbors ) : get_neighbors_(std::forward<FGetNeighbors>(get_neighbors)) { };
 
     void visit_neighbors (std::shared_ptr<TNode> const& current_node) {
         std::vector<TState> neighbors = get_neighbors_( current_node->state_);
@@ -110,7 +111,7 @@ template <typename TNodeVisitor,
           std::output_iterator<typename TNodeVisitor::TNode::value_type> O> 
 bool a_star ( typename TNodeVisitor::TNode::value_type const& start,
               typename TNodeVisitor::TNode::value_type const& goal,
-              TNodeVisitor& node_visitor,
+              TNodeVisitor&& node_visitor,
               O result_path_it, O explored_node_it) {
 
     using TNode = typename TNodeVisitor::TNode; //Node<TState>;
@@ -144,18 +145,14 @@ template <OrderableContainer TContainer,
           StateSpaceEl TState,
           GetNeighborsFunction<TState> FGetNeighbors,
           std::output_iterator<TState> O>
-bool a_star_solve(TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, O result_path_it, O explored_node_it ) {
-    using node_t = typename Node<TState>::node_ptr_type;
-
-    NodeVisitor<TState, std::stack<node_t>, FGetNeighbors> node_visitor( get_neighbors );
-    return a_star ( start, goal, node_visitor, result_path_it, explored_node_it );
-
+bool a_star_solve(TState const& start, TState const& goal, FGetNeighbors&& get_neighbors, O result_path_it, O explored_node_it ) {
+    return a_star ( start, goal,  NodeVisitor<TState, TContainer, FGetNeighbors> ( get_neighbors ), result_path_it, explored_node_it );
 }
 
 template <StateSpaceEl TState,
           GetNeighborsFunction<TState> FGetNeighbors,
           std::output_iterator<TState> O>
-bool dfs_search ( TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, O result_path_it, O explored_node_it ) {
+bool dfs_search ( TState const& start, TState const& goal, FGetNeighbors&& get_neighbors, O result_path_it, O explored_node_it ) {
 
     return a_star_solve<std::stack< typename Node<TState>::node_ptr_type> >
         ( start, goal, get_neighbors, result_path_it, explored_node_it);
@@ -164,14 +161,13 @@ bool dfs_search ( TState const& start, TState const& goal, FGetNeighbors const& 
 template <StateSpaceEl TState,
           GetNeighborsFunction<TState> FGetNeighbors,
           std::output_iterator<TState> O>
-bool bfs_search ( TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, O result_path_it, O explored_node_it ) {
+bool bfs_search ( TState const& start, TState const& goal, FGetNeighbors&& get_neighbors, O result_path_it, O explored_node_it ) {
 
     return a_star_solve<std::queue< typename Node<TState>::node_ptr_type> >
         ( start, goal, get_neighbors, result_path_it, explored_node_it);
 }
 
 } // namespace a_star_search
-
 
 namespace example_1 {
 using example_state_t = int;
@@ -182,15 +178,10 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
         []( example_state_t const& s ) -> std::vector<example_state_t> {return {s-1, s+1};};
 
     //NOTE: fun fact with dfs solution the path not found in not limited space
-    //a_star_search::NodeVisitor<example_state_t, 
-    //    std::stack<example_node_t>,
-    //    decltype(example_get_neighbors)> example_node_visitor( example_get_neighbors );
 
     std::vector<example_state_t> result_path, explored_nodes;
-    //auto is_solved = a_star_search::a_star ( start, goal, example_node_visitor, 
-    //                      std::back_inserter(result_path), std::back_inserter(explored_nodes) );
     auto is_solved = a_star_search::dfs_search<example_state_t, decltype(example_get_neighbors)>
-        (start, goal, example_get_neighbors, std::back_inserter(result_path), std::back_inserter(explored_nodes) ); 
+        (start, goal, std::move(example_get_neighbors), std::back_inserter(result_path), std::back_inserter(explored_nodes) ); 
 
     std::cout << std::boolalpha << "Task is solved: " << is_solved << "(" << result_path.size() << ")" << std::endl;
     for (const auto& p : result_path )
@@ -205,119 +196,46 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 
 } //namespace example_1
 
-#if 0
+
 namespace example_2 {
-struct example_state_t {
-    int _row{-1}, _column{-1};
-};
-
-
-#if 0 // Define 1 to fix
-bool operator== (example_state_t const& l, example_state_t const& r) {
-    return (l._row == r._row) && (l._column == r._column);
-}
-
-bool operator< (example_state_t const& l, example_state_t const& r) {
-    return (l._row < r._row) ? true : l._column < r._column;
-}
-
-bool operator<= (example_state_t const& l, example_state_t const& r) {
-    return (l < r) || (l == r);
-}
-
-bool operator> (example_state_t const& l, example_state_t const& r) {
-    return (l._row > r._row) ? true : l._column > r._column;
-}
-
-bool operator>= (example_state_t const& l, example_state_t const& r) {
-    return (l > r) || (l == r);
-}
-#endif
-
+using example_state_t = signed char;
 using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type; 
 
 void example_solve ( example_state_t const& start, example_state_t const& goal ) {
+
     auto example_get_neighbors = 
         []( example_state_t const& s ) -> std::vector<example_state_t> {
-            return {
-                {s._row - 1, s._column    }, // NORTH
-                //{s._row - 1, s._column - 1}, // NORTH OST
-                {s._row,     s._column - 1}, // OST
-                //{s._row + 1, s._column - 1}, // SOUTH OST 
-                {s._row + 1, s._column    }, // SOUTH
-                //{s._row + 1, s._column + 1}, // SOUTH WEST
-                {s._row    , s._column + 1}, // WEST
-               // {s._row - 1, s._column + 1}  // NORTH WEST
-            };
+
+            if ( s-1 == std::numeric_limits<example_state_t>::min()) 
+                return {s, static_cast<signed char>(s+1)};
+            if (s+1 == std::numeric_limits<example_state_t>::max()) 
+                return {static_cast<signed char>(s-1), s};
+            return {static_cast<signed char>(s-1), static_cast<signed char>(s+1)};
         };
 
     //NOTE: fun fact with dfs solution the path not found in not limited space
-    a_star_search::NodeVisitor<example_state_t, 
-        std::queue<example_node_t>,
-        decltype(example_get_neighbors)> example_node_visitor( example_get_neighbors );
 
     std::vector<example_state_t> result_path, explored_nodes;
-    auto is_solved = a_star_search::a_star(start, goal, example_node_visitor, 
-                          std::back_inserter(result_path), std::back_inserter(explored_nodes) );
+    auto is_solved = a_star_search::dfs_search<example_state_t, decltype(example_get_neighbors)>
+        (start, goal, std::move(example_get_neighbors), std::back_inserter(result_path), std::back_inserter(explored_nodes) ); 
 
     std::cout << std::boolalpha << "Task is solved: " << is_solved << "(" << result_path.size() << ")" << std::endl;
     for (const auto& p : result_path )
-        std::cout << "[" << p._row << " " << p._column << "] ";
-
-    //std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
-    //for (const auto& p : explored_nodes )
-    //    std::cout << "[" << p._row << " " << p._column << "] ";
-
-    std::cout << std::endl;
-}
-
-} //namespace example_1
-#endif
-
-#if 0
-namespace example_3 {
-using example_state_t = int;
-using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type; 
-
-void example_solve ( example_state_t const& start, example_state_t const& goal ) {
-#if 0
-    auto example_get_neighbors_wrong = 
-        []( example_state_t const& s ) -> example_state_t {return  s+1;};
-#endif
-
-    auto example_get_neighbors_correct = 
-        []( example_state_t const& s ) -> std::vector<example_state_t> {return {s+1};};
-
-    a_star_search::NodeVisitor<example_state_t, 
-        std::priority_queue<example_node_t>,
-        decltype(example_get_neighbors_correct)> example_node_visitor( example_get_neighbors_correct);
-
-    std::vector<example_state_t> result_path, explored_nodes;
-    auto is_solved = a_star_search::a_star ( start, goal, example_node_visitor, 
-                          std::back_inserter(result_path), std::back_inserter(explored_nodes) );
-
-    std::cout << std::boolalpha << "Task is solved: " << is_solved << "(" << result_path.size() << ")" << std::endl;
-    for (const auto& p : result_path )
-        std::cout << p  << " ";
+        std::cout << static_cast<int>(p)  << " ";
 
     std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
     for (const auto& p : explored_nodes )
-        std::cout << p  << " ";
+        std::cout << static_cast<int>(p)  << " ";
 
     std::cout << std::endl;
 }
 
-} //namespace example_3
-#endif
-
+} //namespace example_2
 
 int main(void) {
 
-    example_1::example_solve(1,-5);
-
-    //example_2::example_solve( {0,0}, {5,5} );
-    
-    //example_3::example_solve(1,5);  
+    //example_1::example_solve(1,-5);
+    example_2::example_solve(1,-5);
 
     return 0;
 }

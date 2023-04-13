@@ -67,7 +67,21 @@ Let specify interfaces for result path and explored nodes as `std::output_iterat
 
 Next, the implementation of `NodeVisitor` requires `TContainer`  to support certain interfaice.
 We described this interface in the concept `ContainerWithOrder`. 
+Phu-i what a productive sprint...
 
-Is it it? Is this code now safe from wrong usage?
+//Is it it? Is this code now safe from wrong usage?
 
-Let look at some fun example 
+And the dramatic twist - our programmers gets a Bug-report!
+DFS algorithm absolutly not able to find direct path from 0 to -5 on a line! (example_1)
+Algorithm implementation is wrong! Is it? 
+
+Actually algorithm does what it intentended to do. 
+It tries to explore first branch with positive numbers, and users code `example_get_neighbors` doesnt process type overflow
+
+Let look namespace `example_2`. **NOTE - type overflow is undefined behaviour regarding standart, but gcc -compiler I work with wrapping this behaviour, inspite in that note i will do code as it not.**
+
+So our code has some semantic expectation, user not satisfied.
+cppref says that concepts should be used to express sematic requiments 
+
+The given semantic requiments can be formaly written as
+
