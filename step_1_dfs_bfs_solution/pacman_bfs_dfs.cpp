@@ -129,7 +129,7 @@ template <typename TContainer,
           typename TExploredNodeIterator> 
 bool a_star_solve(TState const& start, TState const& goal, FGetNeighbors const& get_neighbors, TResultPathIterator result_path_it, TExploredNodeIterator explored_node_it ) {
     using node_t = typename Node<TState>::node_ptr_type;
-    NodeVisitor<TState, std::stack<node_t>, FGetNeighbors> node_visitor( get_neighbors );
+    NodeVisitor<TState, TContainer, FGetNeighbors> node_visitor( get_neighbors );
     return a_star ( start, goal, node_visitor, result_path_it, explored_node_it );
 }
 
