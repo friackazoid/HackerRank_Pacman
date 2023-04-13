@@ -232,8 +232,6 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
     auto example_get_neighbors = 
         []( example_state_t const& s ) -> std::vector<example_state_t> {return {s-1, s+1};};
 
-    //NOTE: fun fact with dfs solution the path not found in not limited space
-
     std::vector<example_state_t> result_path, explored_nodes;
     auto is_solved = a_star_search::dfs_search<example_state_t, decltype(example_get_neighbors)>
         (start, goal, std::move(example_get_neighbors), MyStepper{1000}, std::back_inserter(result_path), std::back_inserter(explored_nodes) ); 
@@ -249,7 +247,10 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 
 int main(void) {
 
-    //example_1::example_solve(1,-5);
+    std::cout << "Search path from 1 to -5 with DFS algorithm and 30ms timeout" << std::endl;
+    example_1::example_solve(1,-5);
+
+    std::cout << "Search path from 1 to -5 with DFS algorithm and 1000 limit to visit nodes" << std::endl;
     example_2::example_solve(1,-5);
 
     //example_2::example_solve( {0,0}, {5,5} );
