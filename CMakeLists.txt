@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(pacman)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 add_compile_options(-Wall -Werror -Wextra
     $<$<CONFIG:RELEASE>:-Ofast>
@@ -12,6 +13,7 @@ add_compile_options(-std=c++14)
 
 add_subdirectory(step_0_naive_solution)
 add_subdirectory(step_1_dfs_bfs_solution)
+add_subdirectory(step_1.5_dfs_bfs_solution)
 
 add_executable(pacman pacman.cpp)
 

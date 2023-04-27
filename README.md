@@ -51,3 +51,37 @@ And the here we are [`pacman_bfs_dfs.cpp`](https://github.com/friackazoid/Hacker
 And tests:
 - [DFS](https://www.hackerrank.com/showgame/9119550)
 - [BFS](https://www.hackerrank.com/showgame/9119552)
+
+## Step 1.5
+
+Let's continue our scenario where I'm a software engineer who has already developed a library of searching algorithms. 
+Let's say we recently had a sprint or two without any new feature requests, and now we've taken on a task of refactoring and improving the quality of our code.
+So let us use ["concepts"](https://en.cppreference.com/w/cpp/language/constraints), feature invented in 20th standart, to prevent bugs that might arise due to improper usage of the library.
+
+After taking a first glance at the documentation and studying a few examples, we've identified some improvements that we can make to our library using C++20 concepts.
+
+
+First, we defined concept `StateSpaceEl` that specifies the requirements for types that are passed to our search algorithms.
+Our algorithms requires a type to have a comparisong opirator, and a standart library already has a concept that meets this requiments called `std::totally_ordered`.
+Let specify interfaces for result path and explored nodes as `std::output_iterator`.
+
+Next, the implementation of `NodeVisitor` requires `TContainer`  to support certain interfaice.
+We described this interface in the concept `ContainerWithOrder`. 
+Phu-i what a productive sprint...
+
+//Is it it? Is this code now safe from wrong usage?
+
+And the dramatic twist - our programmers gets a Bug-report!
+DFS algorithm absolutly not able to find direct path from 0 to -5 on a line! (example_1)
+Algorithm implementation is wrong! Is it? 
+
+Actually algorithm does what it intentended to do. 
+It tries to explore first branch with positive numbers, and users code `example_get_neighbors` doesnt process type overflow
+
+Let look namespace `example_2`. **NOTE - type overflow is undefined behaviour regarding standart, but gcc -compiler I work with wrapping this behaviour, inspite in that note i will do code as it not.**
+
+So our code has some semantic expectation, user not satisfied.
+cppref says that concepts should be used to express sematic requiments 
+
+The given semantic requiments can be formaly written as
+
