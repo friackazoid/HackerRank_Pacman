@@ -8,9 +8,30 @@
 #include <type_traits>
 #include <algorithm>
 
+namespace a_star_helper {
+    template <typename T> struct is_shared_ptr : std::false_type {};
+    template <typename T> struct is_shared_ptr<std::shared_ptr<T>> : std::true_type {};
+    template <typename T> concept NotSharedPtr = !is_shared_ptr<T>::value;
+
+    template <typename T> struct is_weak_ptr : std::false_type {};
+    template <typename T> struct is_weak_ptr<std::weak_ptr<T>> : std::true_type {};
+    template <typename T> concept NotWeakPtr = !is_weak_ptr<T>::value;
+
+    template <typename T> struct is_unique_ptr : std::false_type {};
+    template <typename T> struct is_unique_ptr<std::unique_ptr<T>> : std::true_type {};
+    template <typename T> concept NotUniquePtr = !is_unique_ptr<T>::value;
+
+    template <typename T> concept NotSmartPointer = NotSharedPtr<T> && NotWeakPtr<T> &&  NotUniquePtr<T>;
+}
+
 namespace a_star_search {
 
-template <typename TState>
+using namespace a_star_helper;
+
+template<typename T>
+concept StateSpaceEl = std::totally_ordered<T> && NotSmartPointer<T> && !std::is_pointer_v<T>;
+
+template <StateSpaceEl TState>
 class Node {
 
 public:
@@ -33,7 +54,7 @@ public:
                                        , parent_(parent) {};
 };
 
-template < typename TState,
+template < StateSpaceEl TState,
            typename TContainer,
            typename FGetNeighbors >
 class NodeVisitor {
@@ -84,7 +105,7 @@ public:
     }
 }; 
 
-template <typename TState, 
+template <StateSpaceEl TState, 
          typename TNodeVisitor,
          typename TResultPathIterator,
          typename TExploredNodeIterator> 
@@ -151,7 +172,7 @@ bool bfs_search ( TState const& start, TState const& goal, FGetNeighbors const& 
 
 } // namespace a_star_search
 
-
+#if 1
 namespace example_1 { 
 using example_state_t = std::pair<int,int>;
 using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type;
@@ -177,9 +198,11 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 
     std::cout << std::endl << "Nodes visited " << explored_nodes.size() << std::endl;
 }
-                                                                                                              
+                         
 } //namespace example_1 
+#endif
 
+#if 0
 namespace example_2 { 
 using example_state_t = std::shared_ptr<std::pair<int,int>>;
 using example_node_t = a_star_search::Node<example_state_t>::node_ptr_type;
@@ -208,13 +231,16 @@ void example_solve ( example_state_t const& start, example_state_t const& goal )
 }
                                                                                                               
 } //namespace example_2
+#endif
 
 int main(void) {
 
+#if 1
     {
         std::pair<int,int> s{1,1}, g{5,5};
         example_1::example_solve(s, g);
     }
+#endif 
 
 #if 0
     {
